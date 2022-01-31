@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <!--Import Google Icon Font-->
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+    <!--Import materialize.css-->
+    <link type="text/css" rel="stylesheet" href="file/static/css/materialize.min.css"  media="screen,projection"/>
+
+    <script src="https://code.jquery.com/jquery-3.4.1.js" integrity="sha256-WpOohJOqMqqyKL9FccASB9O0KwACQJpFTUBLTYOVvVU=" crossorigin="anonymous"></script>
+    <script type="text/javascript" src="file/static/js/push.js"></script>
+
+    <title>ボタンを押せ！！</title>
+
+    <!--Let browser know website is optimized for mobile-->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  </head>
+
+  <body>
+    <nav>
+        <div class="nav-wrapper">
+          <a href="#" class="brand-logo">ボタンを押せ!!!</a>
+          <ul id="nav-mobile" class="right hide-on-med-and-down">
+          </ul>
+        </div>
+    </nav>
+
+    <div class="container">
+      <div class="container">
+        <div id="container" class="card-panel hoverable">
+          <img class="responsive-img" src="/file/images/money1.jpg">
+          <h4>あなたの所持金</h4>
+          <h2 style="color: #EFC986;"><span id="money">{{ .Money }}</span>$</h2>
+          <h5 id="oak-h5-element">オークの実 : <span id="oak-fruits">{{.OakFruits}}</span>個</h5>
+          <h5>サンダーの実 : <span id="thunder-fruits">{{.ThunderFruits}}</span>個</h5>
+          <a class="btn-large" id="push-btn">プッシュ!!</a>
+          <a class="btn-large" id="invest-btn">インベスト!!</a>
+          <a class="btn-large" id="reset-btn">リセット</a>
+          <a href="/store" class="btn-large" style="background-color: #d7ccc8;">ストア</a>
+        </div>
+      </div>
+    </div>
+
+    <!--JavaScript at end of body for optimized loading-->
+    <script type="text/javascript" src="file/static/js/materialize.min.js"></script>
+  </body>
+</html>
