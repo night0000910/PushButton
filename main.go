@@ -13,6 +13,7 @@ func main() {
 
 	http.Handle("/file/", hundles.ReturnFileHandler())
 	http.HandleFunc("/users_information", hundles.ReturnUsersInformation)
+	http.HandleFunc("/signup", hundles.Signup)
 	http.HandleFunc("/push", hundles.Push)
 	http.HandleFunc("/earn_money", hundles.EarnMoney)
 	http.HandleFunc("/invest", hundles.Invest)

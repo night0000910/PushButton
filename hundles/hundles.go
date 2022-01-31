@@ -1,6 +1,7 @@
 package hundles
 
 import (
+	"crypto/sha256"
 	"database/sql"
 	"encoding/json"
 	"fmt"
@@ -45,6 +46,20 @@ type Information struct {
 
 func (user *User) Update() (err error) {
 	_, err = Db.Exec("update users set username=$1, password=$2, money=$3, oak_fruits=$4, thunder_fruits=$5 where id = $6", user.Username, user.Password, user.Money, user.OakFruits, user.ThunderFruits, user.Id)
+	return
+}
+
+func CreateUser(username string, password string) (err error) {
+	_, err = Db.Exec("insert into users (username, password) values ($1, $2)", username, password)
+
+	if err != nil {
+		panic(err)
+	}
+
+	return
+}
+
+func CreateSession() (err error) {
 	return
 }
 
@@ -99,6 +114,39 @@ func ReturnUsersInformation(w http.ResponseWriter, r *http.Request) {
 	}
 	var jsonData []byte
 	jsonData, err = json.Marshal(information)
+
+	w.Header().Set("Content-Type", "application/json")
+	fmt.Fprintln(w, string(jsonData))
+}
+
+func Signup(w http.ResponseWriter, r *http.Request) {
+	r.ParseForm()
+	username := r.PostForm["username"]
+	password := r.Form["password"]
+	hashedPassword := sha256.Sum256([]byte(password))
+	p := string(hashedPassword[:])
+
+	err := CreateUser(username, p)
+
+	var result Information
+
+	if err == nil {
+		result = Information{
+			Message: "success",
+		}
+
+	} else {
+		result = Information{
+			Message: "failed",
+		}
+	}
+
+	var jsonData []byte
+	jsonData, err = json.Marshal(result)
+
+	if err != nil {
+		panic(err)
+	}
 
 	w.Header().Set("Content-Type", "application/json")
 	fmt.Fprintln(w, string(jsonData))
