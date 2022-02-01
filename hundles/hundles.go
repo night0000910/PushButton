@@ -3,6 +3,7 @@ package hundles
 import (
 	"crypto/sha256"
 	"database/sql"
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"html/template"
@@ -51,11 +52,6 @@ func (user *User) Update() (err error) {
 
 func CreateUser(username string, password string) (err error) {
 	_, err = Db.Exec("insert into users (username, password) values ($1, $2)", username, password)
-
-	if err != nil {
-		panic(err)
-	}
-
 	return
 }
 
@@ -119,12 +115,22 @@ func ReturnUsersInformation(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintln(w, string(jsonData))
 }
 
+func DisplaySignupPage(w http.ResponseWriter, r *http.Request) {
+	t, err := template.ParseFiles("templates/signup.html")
+
+	if err != nil {
+		panic(err)
+	}
+
+	t.Execute(w, nil)
+}
+
 func Signup(w http.ResponseWriter, r *http.Request) {
 	r.ParseForm()
-	username := r.PostForm["username"]
-	password := r.Form["password"]
+	username := r.PostForm["username"][0]
+	password := r.PostForm["password"][0]
 	hashedPassword := sha256.Sum256([]byte(password))
-	p := string(hashedPassword[:])
+	p := base64.URLEncoding.EncodeToString(hashedPassword[:])
 
 	err := CreateUser(username, p)
 
@@ -136,6 +142,7 @@ func Signup(w http.ResponseWriter, r *http.Request) {
 		}
 
 	} else {
+		fmt.Println(err)
 		result = Information{
 			Message: "failed",
 		}
@@ -150,6 +157,26 @@ func Signup(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "application/json")
 	fmt.Fprintln(w, string(jsonData))
+}
+
+func SucceedInSignup(w http.ResponseWriter, r *http.Request) {
+	t, err := template.ParseFiles("templates/succeedInSignup.html")
+
+	if err != nil {
+		panic(err)
+	}
+
+	t.Execute(w, nil)
+}
+
+func DisplayLoginPage(w http.ResponseWriter, r *http.Request) {
+	t, err := template.ParseFiles("templates/login.html")
+
+	if err != nil {
+		panic(err)
+	}
+
+	t.Execute(w, nil)
 }
 
 func Push(w http.ResponseWriter, r *http.Request) {
