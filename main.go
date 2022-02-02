@@ -17,6 +17,8 @@ func main() {
 	http.HandleFunc("/signup", hundles.Signup)
 	http.HandleFunc("/succeed_in_signup", hundles.SucceedInSignup)
 	http.HandleFunc("/login_page", hundles.DisplayLoginPage)
+	http.HandleFunc("/login", hundles.Login)
+	http.HandleFunc("/logout", hundles.Logout)
 	http.HandleFunc("/push", hundles.Push)
 	http.HandleFunc("/earn_money", hundles.EarnMoney)
 	http.HandleFunc("/invest", hundles.Invest)

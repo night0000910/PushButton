@@ -1,6 +1,7 @@
 package hundles
 
 import (
+	crand "crypto/rand"
 	"crypto/sha256"
 	"database/sql"
 	"encoding/base64"
@@ -50,12 +51,89 @@ func (user *User) Update() (err error) {
 	return
 }
 
+func Hash(str string) (s string) {
+	hashedStr := sha256.Sum256([]byte(str))
+	s = base64.URLEncoding.EncodeToString(hashedStr[:])
+	return
+}
+
+func MakeRandomString() (randomString string) {
+	const letters = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
+
+	b := make([]byte, 64)
+	crand.Read(b)
+
+	for _, byteValue := range b {
+		value := int(byteValue)
+		index := value % len(letters)
+		randomString += string(letters[index])
+	}
+
+	return
+}
+
 func CreateUser(username string, password string) (err error) {
 	_, err = Db.Exec("insert into users (username, password) values ($1, $2)", username, password)
 	return
 }
 
-func CreateSession() (err error) {
+func Authenticate(username string, password string) (user User, validity bool, err error) {
+	user = User{}
+	var numberOfRecords int
+	err = Db.QueryRow("select count(*) from users where username = $1 and password = $2", username, password).Scan(&numberOfRecords)
+
+	if err != nil {
+		return
+	}
+
+	if numberOfRecords == 1 {
+		validity = true
+		err = Db.QueryRow("select id, username, password, money, oak_fruits, thunder_fruits from users where username = $1", username).Scan(&user.Id, &user.Username, &user.Password, &user.Money, &user.OakFruits, &user.ThunderFruits)
+
+	} else if numberOfRecords == 0 {
+		validity = false
+	}
+
+	return
+}
+
+func CheckUserIsAuthenticated(sessionId string) (user User, validity bool, err error) {
+	user = User{}
+	var numberOfRecords int
+	hashedSessionId := Hash(sessionId)
+	err = Db.QueryRow("select count(*) from session where session_id = $1", hashedSessionId).Scan(&numberOfRecords)
+
+	if err != nil {
+		return
+	}
+
+	if numberOfRecords >= 1 {
+		validity = true
+		var userId int
+		err = Db.QueryRow("select user_id from session where session_id = $1", hashedSessionId).Scan(&userId)
+
+		if err != nil {
+			return
+		}
+
+		err = Db.QueryRow("select id, username, password, money, oak_fruits, thunder_fruits from users where id = $1", userId).Scan(&user.Id, &user.Username, &user.Password, &user.Money, &user.OakFruits, &user.ThunderFruits)
+
+	} else if numberOfRecords == 0 {
+		validity = false
+	}
+
+	return
+}
+
+func CreateSession(userId int, sessionId string) (err error) {
+	hashedSessionId := Hash(sessionId)
+	_, err = Db.Exec("insert into session (user_id, session_id) values ($1, $2)", userId, hashedSessionId)
+	return
+}
+
+func DeleteSession(sessionId string) (err error) {
+	hashedSessionId := Hash(sessionId)
+	_, err = Db.Exec("delete from session where session_id = $1", hashedSessionId)
 	return
 }
 
@@ -129,10 +207,9 @@ func Signup(w http.ResponseWriter, r *http.Request) {
 	r.ParseForm()
 	username := r.PostForm["username"][0]
 	password := r.PostForm["password"][0]
-	hashedPassword := sha256.Sum256([]byte(password))
-	p := base64.URLEncoding.EncodeToString(hashedPassword[:])
+	hashedPassword := Hash(password)
 
-	err := CreateUser(username, p)
+	err := CreateUser(username, hashedPassword)
 
 	var result Information
 
@@ -177,6 +254,83 @@ func DisplayLoginPage(w http.ResponseWriter, r *http.Request) {
 	}
 
 	t.Execute(w, nil)
+}
+
+func Login(w http.ResponseWriter, r *http.Request) {
+	r.ParseForm()
+	username := r.PostForm["username"][0]
+	password := r.PostForm["password"][0]
+	hashedPassword := Hash(password)
+
+	user, validity, err := Authenticate(username, hashedPassword)
+
+	if err != nil {
+		panic(err)
+	}
+
+	if validity {
+		sessionId := MakeRandomString()
+		err = CreateSession(user.Id, sessionId)
+
+		if err != nil {
+			panic(err)
+		}
+
+		cookie := http.Cookie{
+			Name:   "sessionId",
+			Value:  sessionId,
+			MaxAge: 60 * 60 * 24 * 7, // 期間は1週間
+		}
+		http.SetCookie(w, &cookie)
+
+		result := Information{
+			Message: "success",
+		}
+		var jsonData []byte
+		jsonData, err = json.Marshal(result)
+
+		if err != nil {
+			panic(err)
+		}
+
+		w.Header().Set("Content-Type", "application/json")
+		fmt.Fprintln(w, string(jsonData))
+
+	} else {
+		result := Information{
+			Message: "failed",
+		}
+		var jsonData []byte
+		jsonData, err = json.Marshal(result)
+
+		if err != nil {
+			panic(err)
+		}
+
+		w.Header().Set("Content-Type", "application/json")
+		fmt.Fprintln(w, string(jsonData))
+	}
+}
+
+func Logout(w http.ResponseWriter, r *http.Request) {
+	sessionIdCookie, err := r.Cookie("sessionId")
+
+	if err != nil {
+		panic(err)
+	}
+
+	sessionId := sessionIdCookie.String()
+	fmt.Println(sessionId)
+	var user User
+	var validity bool
+	user, validity, err = CheckUserIsAuthenticated(sessionId)
+
+	if validity {
+
+	} else {
+
+	}
+
 }
 
 func Push(w http.ResponseWriter, r *http.Request) {
