@@ -16,9 +16,14 @@ function earnMoney() {
 
 function processAfterEarnMoney() {
     var response = JSON.parse(this.response);
+    var message = response.Message;
     var money = response.Money;
     var moneyElement = document.getElementById("money");
     moneyElement.innerHTML = money;
+
+    if (message == "not authenticated") {
+        window.location.href = "/login_page";
+    }
 }
 
 function invest() {
@@ -66,7 +71,7 @@ function processAfterInvest() {
             h6.innerHTML = "利益は0$でした..."
         }
 
-    } else {
+    } else if (message == "not invested") {
         var h6 = document.getElementById("message");
 
         if (h6 == null) {
@@ -77,6 +82,9 @@ function processAfterInvest() {
 
         h6.setAttribute("style", "color: #333;");
         h6.innerHTML = "サンダーの実がありません"
+
+    } else if (message == "not authenticated") {
+        window.location.href = "/login_page"
     }
 }
 
@@ -89,6 +97,7 @@ function reset() {
 
 function processAfterReset() {
     var response = JSON.parse(this.response);
+    var message = response.Message;
     var money = response.Money;
     var oakFruits = response.OakFruits;
     var thunderFruits = response.ThunderFruits;
@@ -99,4 +108,8 @@ function processAfterReset() {
     oakFruitsElement.innerHTML = oakFruits;
     var thunderFruitsElement = document.getElementById("thunder-fruits");
     thunderFruitsElement.innerHTML = thunderFruits;
+
+    if (message == "not authenticated") {
+        window.location.href = "/login_page";
+    }
 }

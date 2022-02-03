@@ -104,15 +104,15 @@ func Authenticate(username string, password string) (user User, validity bool, e
 	return
 }
 
-func CheckUserIsAuthenticated(w http.ResponseWriter, r *http.Request) (user User, err error) {
+func CheckUserIsAuthenticated(w http.ResponseWriter, r *http.Request) (user User, validity bool, err error) {
 	sessionIdCookie, err := r.Cookie("sessionId")
 
 	if err != nil {
 		MoveToLoginPage(w)
+		return
 	}
 
 	sessionId := ExtractSessionIdFromCookie(sessionIdCookie)
-	var validity bool
 	user, validity, err = GetUser(sessionId)
 
 	if !validity {
@@ -162,7 +162,7 @@ func DeleteSession(sessionId string) (err error) {
 	return
 }
 
-func returnTrueWithCertainProbability() (result bool) {
+func ReturnTrueWithCertainProbability() (result bool) {
 	seed := time.Now().UnixNano()
 	src := rand.NewSource(seed)
 	rnd := rand.New(src)
@@ -183,6 +183,31 @@ func MoveToLoginPage(w http.ResponseWriter) {
 	w.WriteHeader(302)
 }
 
+func WriteInformationAsJson(w http.ResponseWriter, information Information) (err error) {
+	var jsonData string
+	jsonData, err = ChangeInformationToJson(information)
+
+	WriteJson(w, jsonData)
+	return
+}
+
+func ChangeInformationToJson(information Information) (jsonString string, err error) {
+	var jsonByte []byte
+	jsonByte, err = json.Marshal(information)
+
+	if err != nil {
+		return
+	}
+
+	jsonString = string(jsonByte)
+	return
+}
+
+func WriteJson(w http.ResponseWriter, jsonData string) {
+	w.Header().Set("Content-Type", "application/json")
+	fmt.Fprintln(w, jsonData)
+}
+
 // ---------------------- ハンドラ関数 ----------------------------
 
 // ハンドラを生成する関数
@@ -194,10 +219,10 @@ func ReturnFileHandler() (fileHandler http.Handler) {
 }
 
 func ReturnUsersInformation(w http.ResponseWriter, r *http.Request) {
-	user, err := CheckUserIsAuthenticated(w, r)
+	user, validity, err := CheckUserIsAuthenticated(w, r)
 
-	if err != nil {
-		panic(err)
+	if (err != nil) || (!validity) {
+		return
 	}
 
 	priceOfOakFruits := int(100.0 * (math.Pow(2, (float64(user.OakFruits)/10.0)+1.0)))
@@ -210,11 +235,12 @@ func ReturnUsersInformation(w http.ResponseWriter, r *http.Request) {
 		PriceOfOakFruits:     priceOfOakFruits,
 		PriceOfThunderFruits: priceOfThunderFruits,
 	}
-	var jsonData []byte
-	jsonData, err = json.Marshal(information)
 
-	w.Header().Set("Content-Type", "application/json")
-	fmt.Fprintln(w, string(jsonData))
+	err = WriteInformationAsJson(w, information)
+
+	if err != nil {
+		panic(err)
+	}
 }
 
 func DisplaySignupPage(w http.ResponseWriter, r *http.Request) {
@@ -249,15 +275,11 @@ func Signup(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	var jsonData []byte
-	jsonData, err = json.Marshal(result)
+	err = WriteInformationAsJson(w, result)
 
 	if err != nil {
 		panic(err)
 	}
-
-	w.Header().Set("Content-Type", "application/json")
-	fmt.Fprintln(w, string(jsonData))
 }
 
 func SucceedInSignup(w http.ResponseWriter, r *http.Request) {
@@ -310,29 +332,23 @@ func Login(w http.ResponseWriter, r *http.Request) {
 		result := Information{
 			Message: "success",
 		}
-		var jsonData []byte
-		jsonData, err = json.Marshal(result)
+
+		err = WriteInformationAsJson(w, result)
 
 		if err != nil {
 			panic(err)
 		}
-
-		w.Header().Set("Content-Type", "application/json")
-		fmt.Fprintln(w, string(jsonData))
 
 	} else {
 		result := Information{
 			Message: "failed",
 		}
-		var jsonData []byte
-		jsonData, err = json.Marshal(result)
+
+		err = WriteInformationAsJson(w, result)
 
 		if err != nil {
 			panic(err)
 		}
-
-		w.Header().Set("Content-Type", "application/json")
-		fmt.Fprintln(w, string(jsonData))
 	}
 }
 
@@ -340,7 +356,8 @@ func Logout(w http.ResponseWriter, r *http.Request) {
 	sessionIdCookie, err := r.Cookie("sessionId")
 
 	if err != nil {
-		panic(err)
+		MoveToLoginPage(w)
+		return
 	}
 
 	sessionId := ExtractSessionIdFromCookie(sessionIdCookie)
@@ -360,10 +377,10 @@ func Logout(w http.ResponseWriter, r *http.Request) {
 }
 
 func Push(w http.ResponseWriter, r *http.Request) {
-	user, err := CheckUserIsAuthenticated(w, r)
+	user, validity, err := CheckUserIsAuthenticated(w, r)
 
-	if err != nil {
-		panic(err)
+	if (err != nil) || (!validity) {
+		return
 	}
 
 	t, err := template.ParseFiles("templates/push.html")
@@ -376,10 +393,19 @@ func Push(w http.ResponseWriter, r *http.Request) {
 }
 
 func EarnMoney(w http.ResponseWriter, r *http.Request) {
-	user, err := CheckUserIsAuthenticated(w, r)
+	user, validity, err := CheckUserIsAuthenticated(w, r)
 
-	if err != nil {
-		panic(err)
+	if (err != nil) || (!validity) {
+		result := Information{
+			Message: "not authenticated",
+		}
+
+		err = WriteInformationAsJson(w, result)
+
+		if err != nil {
+			panic(err)
+		}
+		return
 	}
 
 	user.Money += int(math.Pow(2, float64(user.OakFruits)/10.0))
@@ -392,22 +418,28 @@ func EarnMoney(w http.ResponseWriter, r *http.Request) {
 	result := Information{
 		Money: user.Money,
 	}
-	var jsonData []byte
-	jsonData, err = json.Marshal(result)
+
+	err = WriteInformationAsJson(w, result)
 
 	if err != nil {
 		panic(err)
 	}
-
-	w.Header().Set("Content-Type", "application/json")
-	fmt.Fprintln(w, string(jsonData))
 }
 
 func Reset(w http.ResponseWriter, r *http.Request) {
-	user, err := CheckUserIsAuthenticated(w, r)
+	user, validity, err := CheckUserIsAuthenticated(w, r)
 
-	if err != nil {
-		panic(err)
+	if (err != nil) || (!validity) {
+		result := Information{
+			Message: "not authenticated",
+		}
+
+		err = WriteInformationAsJson(w, result)
+
+		if err != nil {
+			panic(err)
+		}
+		return
 	}
 
 	user.Money = 0
@@ -424,22 +456,28 @@ func Reset(w http.ResponseWriter, r *http.Request) {
 		OakFruits:     user.OakFruits,
 		ThunderFruits: user.ThunderFruits,
 	}
-	var jsonData []byte
-	jsonData, err = json.Marshal(result)
+
+	err = WriteInformationAsJson(w, result)
 
 	if err != nil {
 		panic(err)
 	}
-
-	w.Header().Set("Content-Type", "application/json")
-	fmt.Fprintln(w, string(jsonData))
 }
 
 func Invest(w http.ResponseWriter, r *http.Request) {
-	user, err := CheckUserIsAuthenticated(w, r)
+	user, validity, err := CheckUserIsAuthenticated(w, r)
 
-	if err != nil {
-		panic(err)
+	if (err != nil) || (!validity) {
+		result := Information{
+			Message: "not authenticated",
+		}
+
+		err = WriteInformationAsJson(w, result)
+
+		if err != nil {
+			panic(err)
+		}
+		return
 	}
 
 	if user.ThunderFruits >= 1 {
@@ -450,7 +488,7 @@ func Invest(w http.ResponseWriter, r *http.Request) {
 			panic(err)
 		}
 
-		if returnTrueWithCertainProbability() {
+		if ReturnTrueWithCertainProbability() {
 			profit := user.Money * 100
 			user.Money += profit
 			err := user.Update()
@@ -465,15 +503,12 @@ func Invest(w http.ResponseWriter, r *http.Request) {
 				ThunderFruits: user.ThunderFruits,
 				Profit:        profit,
 			}
-			var jsonData []byte
-			jsonData, err = json.Marshal(result)
+
+			err = WriteInformationAsJson(w, result)
 
 			if err != nil {
 				panic(err)
 			}
-
-			w.Header().Set("Content-Type", "application/json")
-			fmt.Fprintln(w, string(jsonData))
 
 		} else {
 			result := Information{
@@ -481,15 +516,12 @@ func Invest(w http.ResponseWriter, r *http.Request) {
 				Money:         user.Money,
 				ThunderFruits: user.ThunderFruits,
 			}
-			var jsonData []byte
-			jsonData, err = json.Marshal(result)
+
+			err = WriteInformationAsJson(w, result)
 
 			if err != nil {
 				panic(err)
 			}
-
-			w.Header().Set("Content-Type", "application/json")
-			fmt.Fprintln(w, string(jsonData))
 		}
 
 	} else {
@@ -498,23 +530,20 @@ func Invest(w http.ResponseWriter, r *http.Request) {
 			Money:         user.Money,
 			ThunderFruits: user.ThunderFruits,
 		}
-		var jsonData []byte
-		jsonData, err = json.Marshal(result)
+
+		err = WriteInformationAsJson(w, result)
 
 		if err != nil {
 			panic(err)
 		}
-
-		w.Header().Set("Content-Type", "application/json")
-		fmt.Fprintln(w, string(jsonData))
 	}
 }
 
 func EnterStore(w http.ResponseWriter, r *http.Request) {
-	user, err := CheckUserIsAuthenticated(w, r)
+	user, validity, err := CheckUserIsAuthenticated(w, r)
 
-	if err != nil {
-		panic(err)
+	if (err != nil) || (!validity) {
+		return
 	}
 
 	t, err := template.ParseFiles("templates/store.html")
@@ -527,10 +556,19 @@ func EnterStore(w http.ResponseWriter, r *http.Request) {
 }
 
 func BuyOakFruits(w http.ResponseWriter, r *http.Request) {
-	user, err := CheckUserIsAuthenticated(w, r)
+	user, validity, err := CheckUserIsAuthenticated(w, r)
 
-	if err != nil {
-		panic(err)
+	if (err != nil) || (!validity) {
+		result := Information{
+			Message: "not authenticated",
+		}
+
+		err = WriteInformationAsJson(w, result)
+
+		if err != nil {
+			panic(err)
+		}
+		return
 	}
 
 	priceOfOakFruits := int(100.0 * (math.Pow(2, (float64(user.OakFruits)/10.0)+1.0)))
@@ -555,35 +593,37 @@ func BuyOakFruits(w http.ResponseWriter, r *http.Request) {
 			PriceOfOakFruits:     priceOfOakFruits,
 			PriceOfThunderFruits: priceOfThunderFruits,
 		}
-		var jsonData []byte
-		jsonData, err = json.Marshal(result)
+
+		err = WriteInformationAsJson(w, result)
 
 		if err != nil {
 			panic(err)
 		}
-
-		w.Header().Set("Content-Type", "application/json")
-		fmt.Fprintln(w, string(jsonData))
 
 	} else {
 		result := Information{Message: "failed"}
-		var jsonData []byte
-		jsonData, err = json.Marshal(result)
+		err = WriteInformationAsJson(w, result)
 
 		if err != nil {
 			panic(err)
 		}
-
-		w.Header().Set("Content-Type", "application/json")
-		fmt.Fprintln(w, string(jsonData))
 	}
 }
 
 func BuyThunderFruits(w http.ResponseWriter, r *http.Request) {
-	user, err := CheckUserIsAuthenticated(w, r)
+	user, validity, err := CheckUserIsAuthenticated(w, r)
 
-	if err != nil {
-		panic(err)
+	if (err != nil) || (!validity) {
+		result := Information{
+			Message: "not authenticated",
+		}
+
+		err = WriteInformationAsJson(w, result)
+
+		if err != nil {
+			panic(err)
+		}
+		return
 	}
 
 	requiredOakFruits := 100
@@ -609,28 +649,22 @@ func BuyThunderFruits(w http.ResponseWriter, r *http.Request) {
 			PriceOfOakFruits:     priceOfOakFruits,
 			PriceOfThunderFruits: priceOfThunderFruits,
 		}
-		var jsonData []byte
-		jsonData, err = json.Marshal(result)
+
+		err = WriteInformationAsJson(w, result)
 
 		if err != nil {
 			panic(err)
 		}
-
-		w.Header().Set("Content-Type", "application/json")
-		fmt.Fprintln(w, string(jsonData))
 
 	} else {
 		result := Information{
 			Message: "failed",
 		}
-		var jsonData []byte
-		jsonData, err = json.Marshal(result)
+
+		err = WriteInformationAsJson(w, result)
 
 		if err != nil {
 			panic(err)
 		}
-
-		w.Header().Set("Content-Type", "application/json")
-		fmt.Fprintln(w, string(jsonData))
 	}
 }
