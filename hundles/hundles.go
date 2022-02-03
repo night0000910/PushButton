@@ -11,6 +11,7 @@ import (
 	"math"
 	"math/rand"
 	"net/http"
+	"strings"
 	"time"
 
 	_ "github.com/lib/pq"
@@ -72,6 +73,12 @@ func MakeRandomString() (randomString string) {
 	return
 }
 
+func ExtractSessionIdFromCookie(cookie *http.Cookie) (sessionId string) {
+	cookieString := cookie.String()
+	sessionId = strings.Split(cookieString, "=")[1]
+	return
+}
+
 func CreateUser(username string, password string) (err error) {
 	_, err = Db.Exec("insert into users (username, password) values ($1, $2)", username, password)
 	return
@@ -97,7 +104,25 @@ func Authenticate(username string, password string) (user User, validity bool, e
 	return
 }
 
-func CheckUserIsAuthenticated(sessionId string) (user User, validity bool, err error) {
+func CheckUserIsAuthenticated(w http.ResponseWriter, r *http.Request) (user User, err error) {
+	sessionIdCookie, err := r.Cookie("sessionId")
+
+	if err != nil {
+		MoveToLoginPage(w)
+	}
+
+	sessionId := ExtractSessionIdFromCookie(sessionIdCookie)
+	var validity bool
+	user, validity, err = GetUser(sessionId)
+
+	if !validity {
+		MoveToLoginPage(w)
+	}
+
+	return
+}
+
+func GetUser(sessionId string) (user User, validity bool, err error) {
 	user = User{}
 	var numberOfRecords int
 	hashedSessionId := Hash(sessionId)
@@ -137,12 +162,6 @@ func DeleteSession(sessionId string) (err error) {
 	return
 }
 
-func GetUser(id int) (user User, err error) {
-	user = User{}
-	err = Db.QueryRow("select id, username, password, money, oak_fruits, thunder_fruits from users where id = $1", id).Scan(&user.Id, &user.Username, &user.Password, &user.Money, &user.OakFruits, &user.ThunderFruits)
-	return
-}
-
 func returnTrueWithCertainProbability() (result bool) {
 	seed := time.Now().UnixNano()
 	src := rand.NewSource(seed)
@@ -159,6 +178,11 @@ func returnTrueWithCertainProbability() (result bool) {
 	return
 }
 
+func MoveToLoginPage(w http.ResponseWriter) {
+	w.Header().Set("Location", "http://127.0.0.1:8080/login_page")
+	w.WriteHeader(302)
+}
+
 // ---------------------- ハンドラ関数 ----------------------------
 
 // ハンドラを生成する関数
@@ -170,7 +194,7 @@ func ReturnFileHandler() (fileHandler http.Handler) {
 }
 
 func ReturnUsersInformation(w http.ResponseWriter, r *http.Request) {
-	user, err := GetUser(1)
+	user, err := CheckUserIsAuthenticated(w, r)
 
 	if err != nil {
 		panic(err)
@@ -319,22 +343,24 @@ func Logout(w http.ResponseWriter, r *http.Request) {
 		panic(err)
 	}
 
-	sessionId := sessionIdCookie.String()
-	fmt.Println(sessionId)
-	var user User
-	var validity bool
-	user, validity, err = CheckUserIsAuthenticated(sessionId)
+	sessionId := ExtractSessionIdFromCookie(sessionIdCookie)
+	err = DeleteSession(sessionId)
 
-	if validity {
-
-	} else {
-
+	if err != nil {
+		panic(err)
 	}
+
+	cookie := http.Cookie{
+		Name:   "sessionId",
+		MaxAge: -1,
+	}
+	http.SetCookie(w, &cookie)
+	MoveToLoginPage(w)
 
 }
 
 func Push(w http.ResponseWriter, r *http.Request) {
-	user, err := GetUser(1)
+	user, err := CheckUserIsAuthenticated(w, r)
 
 	if err != nil {
 		panic(err)
@@ -350,7 +376,7 @@ func Push(w http.ResponseWriter, r *http.Request) {
 }
 
 func EarnMoney(w http.ResponseWriter, r *http.Request) {
-	user, err := GetUser(1)
+	user, err := CheckUserIsAuthenticated(w, r)
 
 	if err != nil {
 		panic(err)
@@ -378,7 +404,7 @@ func EarnMoney(w http.ResponseWriter, r *http.Request) {
 }
 
 func Reset(w http.ResponseWriter, r *http.Request) {
-	user, err := GetUser(1)
+	user, err := CheckUserIsAuthenticated(w, r)
 
 	if err != nil {
 		panic(err)
@@ -410,7 +436,7 @@ func Reset(w http.ResponseWriter, r *http.Request) {
 }
 
 func Invest(w http.ResponseWriter, r *http.Request) {
-	user, err := GetUser(1)
+	user, err := CheckUserIsAuthenticated(w, r)
 
 	if err != nil {
 		panic(err)
@@ -485,7 +511,7 @@ func Invest(w http.ResponseWriter, r *http.Request) {
 }
 
 func EnterStore(w http.ResponseWriter, r *http.Request) {
-	user, err := GetUser(1)
+	user, err := CheckUserIsAuthenticated(w, r)
 
 	if err != nil {
 		panic(err)
@@ -501,7 +527,7 @@ func EnterStore(w http.ResponseWriter, r *http.Request) {
 }
 
 func BuyOakFruits(w http.ResponseWriter, r *http.Request) {
-	user, err := GetUser(1)
+	user, err := CheckUserIsAuthenticated(w, r)
 
 	if err != nil {
 		panic(err)
@@ -554,7 +580,7 @@ func BuyOakFruits(w http.ResponseWriter, r *http.Request) {
 }
 
 func BuyThunderFruits(w http.ResponseWriter, r *http.Request) {
-	user, err := GetUser(1)
+	user, err := CheckUserIsAuthenticated(w, r)
 
 	if err != nil {
 		panic(err)
