@@ -104,20 +104,15 @@ func Authenticate(username string, password string) (user User, validity bool, e
 	return
 }
 
-func CheckUserIsAuthenticated(w http.ResponseWriter, r *http.Request) (user User, validity bool, err error) {
+func CheckUserIsAuthenticated(r *http.Request) (user User, validity bool, err error) {
 	sessionIdCookie, err := r.Cookie("sessionId")
 
 	if err != nil {
-		MoveToLoginPage(w)
 		return
 	}
 
 	sessionId := ExtractSessionIdFromCookie(sessionIdCookie)
 	user, validity, err = GetUser(sessionId)
-
-	if !validity {
-		MoveToLoginPage(w)
-	}
 
 	return
 }
@@ -178,8 +173,8 @@ func ReturnTrueWithCertainProbability() (result bool) {
 	return
 }
 
-func MoveToLoginPage(w http.ResponseWriter) {
-	w.Header().Set("Location", "http://127.0.0.1:8080/login_page")
+func MoveTo(page string, w http.ResponseWriter) {
+	w.Header().Set("Location", "http://127.0.0.1:8080/"+page)
 	w.WriteHeader(302)
 }
 
@@ -219,7 +214,7 @@ func ReturnFileHandler() (fileHandler http.Handler) {
 }
 
 func ReturnUsersInformation(w http.ResponseWriter, r *http.Request) {
-	user, validity, err := CheckUserIsAuthenticated(w, r)
+	user, validity, err := CheckUserIsAuthenticated(r)
 
 	if (err != nil) || (!validity) {
 		return
@@ -244,7 +239,15 @@ func ReturnUsersInformation(w http.ResponseWriter, r *http.Request) {
 }
 
 func DisplaySignupPage(w http.ResponseWriter, r *http.Request) {
-	t, err := template.ParseFiles("templates/signup.html")
+	_, validity, err := CheckUserIsAuthenticated(r)
+
+	if (err == nil) && validity {
+		MoveTo("push", w)
+		return
+	}
+
+	var t *template.Template
+	t, err = template.ParseFiles("templates/signup.html")
 
 	if err != nil {
 		panic(err)
@@ -283,7 +286,15 @@ func Signup(w http.ResponseWriter, r *http.Request) {
 }
 
 func SucceedInSignup(w http.ResponseWriter, r *http.Request) {
-	t, err := template.ParseFiles("templates/succeedInSignup.html")
+	_, validity, err := CheckUserIsAuthenticated(r)
+
+	if (err == nil) && validity {
+		MoveTo("push", w)
+		return
+	}
+
+	var t *template.Template
+	t, err = template.ParseFiles("templates/succeedInSignup.html")
 
 	if err != nil {
 		panic(err)
@@ -293,7 +304,15 @@ func SucceedInSignup(w http.ResponseWriter, r *http.Request) {
 }
 
 func DisplayLoginPage(w http.ResponseWriter, r *http.Request) {
-	t, err := template.ParseFiles("templates/login.html")
+	_, validity, err := CheckUserIsAuthenticated(r)
+
+	if (err == nil) && validity {
+		MoveTo("push", w)
+		return
+	}
+
+	var t *template.Template
+	t, err = template.ParseFiles("templates/login.html")
 
 	if err != nil {
 		panic(err)
@@ -356,7 +375,7 @@ func Logout(w http.ResponseWriter, r *http.Request) {
 	sessionIdCookie, err := r.Cookie("sessionId")
 
 	if err != nil {
-		MoveToLoginPage(w)
+		MoveTo("login_page", w)
 		return
 	}
 
@@ -372,14 +391,15 @@ func Logout(w http.ResponseWriter, r *http.Request) {
 		MaxAge: -1,
 	}
 	http.SetCookie(w, &cookie)
-	MoveToLoginPage(w)
+	MoveTo("login_page", w)
 
 }
 
 func Push(w http.ResponseWriter, r *http.Request) {
-	user, validity, err := CheckUserIsAuthenticated(w, r)
+	user, validity, err := CheckUserIsAuthenticated(r)
 
 	if (err != nil) || (!validity) {
+		MoveTo("login_page", w)
 		return
 	}
 
@@ -393,7 +413,7 @@ func Push(w http.ResponseWriter, r *http.Request) {
 }
 
 func EarnMoney(w http.ResponseWriter, r *http.Request) {
-	user, validity, err := CheckUserIsAuthenticated(w, r)
+	user, validity, err := CheckUserIsAuthenticated(r)
 
 	if (err != nil) || (!validity) {
 		result := Information{
@@ -427,7 +447,7 @@ func EarnMoney(w http.ResponseWriter, r *http.Request) {
 }
 
 func Reset(w http.ResponseWriter, r *http.Request) {
-	user, validity, err := CheckUserIsAuthenticated(w, r)
+	user, validity, err := CheckUserIsAuthenticated(r)
 
 	if (err != nil) || (!validity) {
 		result := Information{
@@ -465,7 +485,7 @@ func Reset(w http.ResponseWriter, r *http.Request) {
 }
 
 func Invest(w http.ResponseWriter, r *http.Request) {
-	user, validity, err := CheckUserIsAuthenticated(w, r)
+	user, validity, err := CheckUserIsAuthenticated(r)
 
 	if (err != nil) || (!validity) {
 		result := Information{
@@ -540,9 +560,10 @@ func Invest(w http.ResponseWriter, r *http.Request) {
 }
 
 func EnterStore(w http.ResponseWriter, r *http.Request) {
-	user, validity, err := CheckUserIsAuthenticated(w, r)
+	user, validity, err := CheckUserIsAuthenticated(r)
 
 	if (err != nil) || (!validity) {
+		MoveTo("login_page", w)
 		return
 	}
 
@@ -556,7 +577,7 @@ func EnterStore(w http.ResponseWriter, r *http.Request) {
 }
 
 func BuyOakFruits(w http.ResponseWriter, r *http.Request) {
-	user, validity, err := CheckUserIsAuthenticated(w, r)
+	user, validity, err := CheckUserIsAuthenticated(r)
 
 	if (err != nil) || (!validity) {
 		result := Information{
@@ -611,7 +632,7 @@ func BuyOakFruits(w http.ResponseWriter, r *http.Request) {
 }
 
 func BuyThunderFruits(w http.ResponseWriter, r *http.Request) {
-	user, validity, err := CheckUserIsAuthenticated(w, r)
+	user, validity, err := CheckUserIsAuthenticated(r)
 
 	if (err != nil) || (!validity) {
 		result := Information{

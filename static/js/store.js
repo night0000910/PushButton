@@ -61,7 +61,7 @@ function processAfterBuyOakFruits() {
         var container = document.getElementById("container");
         container.insertBefore(h6, h5);
 
-    } else {
+    } else if (message == "failed") {
         var h6 = document.getElementById("message");
 
         if (h6 == null) {
@@ -73,8 +73,10 @@ function processAfterBuyOakFruits() {
         var h5 = document.getElementById("money-h5-element");
         var container = document.getElementById("container");
         container.insertBefore(h6, h5);
-    }
 
+    } else if (message == "not authenticated") {
+        window.location.href = "/login_page";
+    }
 }
 
 function buyThunderFruits() {
@@ -113,7 +115,7 @@ function processAfterBuyThunderFruits() {
 
         h6.innerHTML = "サンダーの実を購入しました"
 
-    } else {
+    } else if (message == "failed") {
         var h6 = document.getElementById("message");
 
         if (h6 == null) {
@@ -125,6 +127,9 @@ function processAfterBuyThunderFruits() {
         }
 
         h6.innerHTML = "サンダーの実を購入できませんでした"
+
+    } else if (message == "not authenticated") {
+        window.location.href = "/login_page";
     }
 
 }
