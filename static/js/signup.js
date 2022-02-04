@@ -38,7 +38,7 @@ function processAfterSignup() {
     if (message == "success") {
         window.location.href = "/succeed_in_signup"
 
-    } else {
+    } else if (message == "failed") {
 
         var h6 = document.getElementById("message");
     
@@ -51,5 +51,8 @@ function processAfterSignup() {
 
             h6.innerHTML = "既に同じ名前のユーザーが存在します"
         }
+
+    } else if (message == "authenticated") {
+        window.location.href = "/push";
     }
 }

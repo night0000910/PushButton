@@ -39,7 +39,7 @@ function processAfterLogin() {
     if (message == "success") {
         window.location.href = "/push"
 
-    } else {
+    } else if (message == "failed") {
         var h6 = document.getElementById("message");
     
         if (h6 == null) {
@@ -51,5 +51,8 @@ function processAfterLogin() {
 
             h6.innerHTML = "ログインに失敗しました";
         }
+
+    } else if (message == "authenticated") {
+        window.location.href = "/push"
     }
 }

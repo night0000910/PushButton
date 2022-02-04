@@ -238,6 +238,56 @@ func ReturnUsersInformation(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+func MoveToHomepageOrPushPage(w http.ResponseWriter, r *http.Request) {
+	_, validity, err := CheckUserIsAuthenticated(r)
+
+	if (err == nil) && validity {
+		MoveTo("push", w)
+
+	} else {
+		MoveTo("homepage", w)
+	}
+}
+
+func DisplayHomepage(w http.ResponseWriter, r *http.Request) {
+	_, validity, err := CheckUserIsAuthenticated(r)
+
+	if (err == nil) && validity {
+		MoveTo("push", w)
+		return
+	}
+
+	var t *template.Template
+	t, err = template.ParseFiles("templates/homepage.html")
+
+	if err != nil {
+		panic(err)
+	}
+
+	t.Execute(w, nil)
+}
+
+func DisplayExplanation(w http.ResponseWriter, r *http.Request) {
+	_, validity, err := CheckUserIsAuthenticated(r)
+
+	var authentication bool
+
+	if (err == nil) && validity {
+		authentication = true
+	} else {
+		authentication = false
+	}
+
+	var t *template.Template
+	t, err = template.ParseFiles("templates/explanation.html")
+
+	if err != nil {
+		panic(err)
+	}
+
+	t.Execute(w, authentication)
+}
+
 func DisplaySignupPage(w http.ResponseWriter, r *http.Request) {
 	_, validity, err := CheckUserIsAuthenticated(r)
 
@@ -257,12 +307,27 @@ func DisplaySignupPage(w http.ResponseWriter, r *http.Request) {
 }
 
 func Signup(w http.ResponseWriter, r *http.Request) {
+	_, validity, err := CheckUserIsAuthenticated(r)
+
+	if (err == nil) && validity {
+		result := Information{
+			Message: "authenticated",
+		}
+
+		err = WriteInformationAsJson(w, result)
+
+		if err != nil {
+			panic(err)
+		}
+		return
+	}
+
 	r.ParseForm()
 	username := r.PostForm["username"][0]
 	password := r.PostForm["password"][0]
 	hashedPassword := Hash(password)
 
-	err := CreateUser(username, hashedPassword)
+	err = CreateUser(username, hashedPassword)
 
 	var result Information
 
@@ -322,6 +387,21 @@ func DisplayLoginPage(w http.ResponseWriter, r *http.Request) {
 }
 
 func Login(w http.ResponseWriter, r *http.Request) {
+	_, validity, err := CheckUserIsAuthenticated(r)
+
+	if (err == nil) && validity {
+		result := Information{
+			Message: "authenticated",
+		}
+
+		err = WriteInformationAsJson(w, result)
+
+		if err != nil {
+			panic(err)
+		}
+		return
+	}
+
 	r.ParseForm()
 	username := r.PostForm["username"][0]
 	password := r.PostForm["password"][0]
@@ -375,7 +455,7 @@ func Logout(w http.ResponseWriter, r *http.Request) {
 	sessionIdCookie, err := r.Cookie("sessionId")
 
 	if err != nil {
-		MoveTo("login_page", w)
+		MoveTo("homepage", w)
 		return
 	}
 
@@ -391,7 +471,7 @@ func Logout(w http.ResponseWriter, r *http.Request) {
 		MaxAge: -1,
 	}
 	http.SetCookie(w, &cookie)
-	MoveTo("login_page", w)
+	MoveTo("homepage", w)
 
 }
 
@@ -399,7 +479,7 @@ func Push(w http.ResponseWriter, r *http.Request) {
 	user, validity, err := CheckUserIsAuthenticated(r)
 
 	if (err != nil) || (!validity) {
-		MoveTo("login_page", w)
+		MoveTo("homepage", w)
 		return
 	}
 
@@ -563,7 +643,7 @@ func EnterStore(w http.ResponseWriter, r *http.Request) {
 	user, validity, err := CheckUserIsAuthenticated(r)
 
 	if (err != nil) || (!validity) {
-		MoveTo("login_page", w)
+		MoveTo("homepage", w)
 		return
 	}
 

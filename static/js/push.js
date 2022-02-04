@@ -22,7 +22,7 @@ function processAfterEarnMoney() {
     moneyElement.innerHTML = money;
 
     if (message == "not authenticated") {
-        window.location.href = "/login_page";
+        window.location.href = "/homepage";
     }
 }
 
@@ -84,7 +84,7 @@ function processAfterInvest() {
         h6.innerHTML = "サンダーの実がありません"
 
     } else if (message == "not authenticated") {
-        window.location.href = "/login_page"
+        window.location.href = "/homepage"
     }
 }
 
@@ -110,6 +110,6 @@ function processAfterReset() {
     thunderFruitsElement.innerHTML = thunderFruits;
 
     if (message == "not authenticated") {
-        window.location.href = "/login_page";
+        window.location.href = "/homepage";
     }
 }

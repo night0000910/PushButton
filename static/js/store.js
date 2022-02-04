@@ -75,7 +75,7 @@ function processAfterBuyOakFruits() {
         container.insertBefore(h6, h5);
 
     } else if (message == "not authenticated") {
-        window.location.href = "/login_page";
+        window.location.href = "/homepage";
     }
 }
 
@@ -129,7 +129,7 @@ function processAfterBuyThunderFruits() {
         h6.innerHTML = "サンダーの実を購入できませんでした"
 
     } else if (message == "not authenticated") {
-        window.location.href = "/login_page";
+        window.location.href = "/homepage";
     }
 
 }

@@ -13,6 +13,9 @@ func main() {
 
 	http.Handle("/file/", hundles.ReturnFileHandler())
 	http.HandleFunc("/users_information", hundles.ReturnUsersInformation)
+	http.HandleFunc("/", hundles.MoveToHomepageOrPushPage)
+	http.HandleFunc("/homepage", hundles.DisplayHomepage)
+	http.HandleFunc("/explanation", hundles.DisplayExplanation)
 	http.HandleFunc("/signup_page", hundles.DisplaySignupPage)
 	http.HandleFunc("/signup", hundles.Signup)
 	http.HandleFunc("/succeed_in_signup", hundles.SucceedInSignup)
