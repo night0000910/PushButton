@@ -32,9 +32,28 @@ type User struct {
 	Id            int
 	Username      string
 	Password      string
+	CsrfToken     string
 	Money         int
 	OakFruits     int
 	ThunderFruits int
+}
+
+func (user *User) Update() (err error) {
+	hashedCsrfToken := Hash(user.CsrfToken)
+	_, err = Db.Exec("update users set username=$1, password=$2, csrf_token=$3, money=$4, oak_fruits=$5, thunder_fruits=$6 where id = $7", user.Username, user.Password, hashedCsrfToken, user.Money, user.OakFruits, user.ThunderFruits, user.Id)
+	return
+}
+
+func (user *User) CreateSession(sessionId string) (err error) {
+	hashedSessionId := Hash(sessionId)
+	_, err = Db.Exec("insert into session (user_id, session_id) values ($1, $2)", user.Id, hashedSessionId)
+	return
+}
+
+func (user *User) CreateCsrfToken() (err error) {
+	user.CsrfToken = MakeRandomString()
+	err = user.Update()
+	return
 }
 
 type Information struct {
@@ -47,10 +66,7 @@ type Information struct {
 	Profit               int
 }
 
-func (user *User) Update() (err error) {
-	_, err = Db.Exec("update users set username=$1, password=$2, money=$3, oak_fruits=$4, thunder_fruits=$5 where id = $6", user.Username, user.Password, user.Money, user.OakFruits, user.ThunderFruits, user.Id)
-	return
-}
+// ----------------------------- 関数 ------------------------------
 
 func Hash(str string) (s string) {
 	hashedStr := sha256.Sum256([]byte(str))
@@ -79,15 +95,22 @@ func ExtractSessionIdFromCookie(cookie *http.Cookie) (sessionId string) {
 	return
 }
 
-func CreateUser(username string, password string) (err error) {
-	_, err = Db.Exec("insert into users (username, password) values ($1, $2)", username, password)
+func CreateUser(username string, password string) (user User, err error) {
+	user = User{}
+	err = Db.QueryRow("insert into users (username, password) values ($1, $2)", username, password).Scan(&user.Id)
+
+	if err != nil {
+		return
+	}
+
+	err = Db.QueryRow("select id, username, password, csrf_token, money, oak_fruits, thunder_fruits where id = $1", user.Id).Scan(&user.Id, &user.Username, &user.Password, &user.CsrfToken, &user.Money, &user.OakFruits, &user.ThunderFruits)
 	return
 }
 
 func Authenticate(username string, password string) (user User, validity bool, err error) {
-	user = User{}
 	var numberOfRecords int
-	err = Db.QueryRow("select count(*) from users where username = $1 and password = $2", username, password).Scan(&numberOfRecords)
+	hashedPassword := Hash(password)
+	err = Db.QueryRow("select count(*) from users where username = $1 and password = $2", username, hashedPassword).Scan(&numberOfRecords)
 
 	if err != nil {
 		return
@@ -95,7 +118,7 @@ func Authenticate(username string, password string) (user User, validity bool, e
 
 	if numberOfRecords == 1 {
 		validity = true
-		err = Db.QueryRow("select id, username, password, money, oak_fruits, thunder_fruits from users where username = $1", username).Scan(&user.Id, &user.Username, &user.Password, &user.Money, &user.OakFruits, &user.ThunderFruits)
+		err = Db.QueryRow("select id, username, password, csrf_token, money, oak_fruits, thunder_fruits from users where username = $1", username).Scan(&user.Id, &user.Username, &user.Password, &user.CsrfToken, &user.Money, &user.OakFruits, &user.ThunderFruits)
 
 	} else if numberOfRecords == 0 {
 		validity = false
@@ -142,12 +165,6 @@ func GetUser(sessionId string) (user User, validity bool, err error) {
 		validity = false
 	}
 
-	return
-}
-
-func CreateSession(userId int, sessionId string) (err error) {
-	hashedSessionId := Hash(sessionId)
-	_, err = Db.Exec("insert into session (user_id, session_id) values ($1, $2)", userId, hashedSessionId)
 	return
 }
 
@@ -251,7 +268,6 @@ func MoveToHomepageOrPushPage(w http.ResponseWriter, r *http.Request) {
 
 func DisplayHomepage(w http.ResponseWriter, r *http.Request) {
 	_, validity, err := CheckUserIsAuthenticated(r)
-
 	if (err == nil) && validity {
 		MoveTo("push", w)
 		return
@@ -259,7 +275,6 @@ func DisplayHomepage(w http.ResponseWriter, r *http.Request) {
 
 	var t *template.Template
 	t, err = template.ParseFiles("templates/homepage.html")
-
 	if err != nil {
 		panic(err)
 	}
@@ -280,7 +295,6 @@ func DisplayExplanation(w http.ResponseWriter, r *http.Request) {
 
 	var t *template.Template
 	t, err = template.ParseFiles("templates/explanation.html")
-
 	if err != nil {
 		panic(err)
 	}
@@ -290,7 +304,6 @@ func DisplayExplanation(w http.ResponseWriter, r *http.Request) {
 
 func DisplaySignupPage(w http.ResponseWriter, r *http.Request) {
 	_, validity, err := CheckUserIsAuthenticated(r)
-
 	if (err == nil) && validity {
 		MoveTo("push", w)
 		return
@@ -298,7 +311,6 @@ func DisplaySignupPage(w http.ResponseWriter, r *http.Request) {
 
 	var t *template.Template
 	t, err = template.ParseFiles("templates/signup.html")
-
 	if err != nil {
 		panic(err)
 	}
@@ -326,25 +338,32 @@ func Signup(w http.ResponseWriter, r *http.Request) {
 	username := r.PostForm["username"][0]
 	password := r.PostForm["password"][0]
 	hashedPassword := Hash(password)
+	var user User
+	user, err = CreateUser(username, hashedPassword)
 
-	err = CreateUser(username, hashedPassword)
-
-	var result Information
-
-	if err == nil {
-		result = Information{
-			Message: "success",
-		}
-
-	} else {
+	if err != nil {
 		fmt.Println(err)
-		result = Information{
+		result := Information{
 			Message: "failed",
 		}
+
+		err = WriteInformationAsJson(w, result)
+		if err != nil {
+			panic(err)
+		}
+		return
+	}
+
+	err = user.CreateCsrfToken()
+	if err != nil {
+		panic(err)
+	}
+
+	result := Information{
+		Message: "success",
 	}
 
 	err = WriteInformationAsJson(w, result)
-
 	if err != nil {
 		panic(err)
 	}
@@ -405,9 +424,8 @@ func Login(w http.ResponseWriter, r *http.Request) {
 	r.ParseForm()
 	username := r.PostForm["username"][0]
 	password := r.PostForm["password"][0]
-	hashedPassword := Hash(password)
 
-	user, validity, err := Authenticate(username, hashedPassword)
+	user, validity, err := Authenticate(username, password)
 
 	if err != nil {
 		panic(err)
@@ -415,7 +433,7 @@ func Login(w http.ResponseWriter, r *http.Request) {
 
 	if validity {
 		sessionId := MakeRandomString()
-		err = CreateSession(user.Id, sessionId)
+		err = user.CreateSession(sessionId)
 
 		if err != nil {
 			panic(err)
@@ -481,6 +499,11 @@ func Push(w http.ResponseWriter, r *http.Request) {
 	if (err != nil) || (!validity) {
 		MoveTo("homepage", w)
 		return
+	}
+
+	err = user.CreateCsrfToken()
+	if err != nil {
+		panic(err)
 	}
 
 	t, err := template.ParseFiles("templates/push.html")
@@ -645,6 +668,11 @@ func EnterStore(w http.ResponseWriter, r *http.Request) {
 	if (err != nil) || (!validity) {
 		MoveTo("homepage", w)
 		return
+	}
+
+	err = user.CreateCsrfToken()
+	if err != nil {
+		panic(err)
 	}
 
 	t, err := template.ParseFiles("templates/store.html")

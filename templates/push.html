@@ -16,6 +16,8 @@
   </head>
 
   <body>
+    <input type="hidden" value="{{ .CsrfToken }}" id="csrf-token">
+
     <nav>
         <div class="nav-wrapper">
           <a href="/push" class="brand-logo">ボタンを押せ!!!</a>
@@ -32,8 +34,8 @@
           <img class="responsive-img" src="/file/images/money1.jpg">
           <h4>あなたの所持金</h4>
           <h2 style="color: #EFC986;"><span id="money">{{ .Money }}</span>$</h2>
-          <h5 id="oak-h5-element">オークの実 : <span id="oak-fruits">{{.OakFruits}}</span>個</h5>
-          <h5>サンダーの実 : <span id="thunder-fruits">{{.ThunderFruits}}</span>個</h5>
+          <h5 id="oak-h5-element">オークの実 : <span id="oak-fruits">{{ .OakFruits }}</span>個</h5>
+          <h5>サンダーの実 : <span id="thunder-fruits">{{ .ThunderFruits }}</span>個</h5>
           <a class="btn-large" id="push-btn">プッシュ!!</a>
           <a class="btn-large" id="invest-btn">インベスト!!</a>
           <a class="btn-large" id="reset-btn">リセット</a>
