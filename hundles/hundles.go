@@ -97,13 +97,14 @@ func ExtractSessionIdFromCookie(cookie *http.Cookie) (sessionId string) {
 
 func CreateUser(username string, password string) (user User, err error) {
 	user = User{}
-	err = Db.QueryRow("insert into users (username, password) values ($1, $2)", username, password).Scan(&user.Id)
+	hashedPassword := Hash(password)
+	err = Db.QueryRow("insert into users (username, password) values ($1, $2) returning id", username, hashedPassword).Scan(&user.Id)
 
 	if err != nil {
 		return
 	}
 
-	err = Db.QueryRow("select id, username, password, csrf_token, money, oak_fruits, thunder_fruits where id = $1", user.Id).Scan(&user.Id, &user.Username, &user.Password, &user.CsrfToken, &user.Money, &user.OakFruits, &user.ThunderFruits)
+	err = Db.QueryRow("select id, username, password, csrf_token, money, oak_fruits, thunder_fruits from users where id = $1", user.Id).Scan(&user.Id, &user.Username, &user.Password, &user.CsrfToken, &user.Money, &user.OakFruits, &user.ThunderFruits)
 	return
 }
 
@@ -337,12 +338,10 @@ func Signup(w http.ResponseWriter, r *http.Request) {
 	r.ParseForm()
 	username := r.PostForm["username"][0]
 	password := r.PostForm["password"][0]
-	hashedPassword := Hash(password)
 	var user User
-	user, err = CreateUser(username, hashedPassword)
+	user, err = CreateUser(username, password)
 
 	if err != nil {
-		fmt.Println(err)
 		result := Information{
 			Message: "failed",
 		}
