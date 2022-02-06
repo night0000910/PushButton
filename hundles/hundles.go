@@ -56,6 +56,22 @@ func (user *User) CreateCsrfToken() (err error) {
 	return
 }
 
+func (user *User) VerifyCsrfToken() (validity bool, err error) {
+	hashedCsrfToken := Hash(user.CsrfToken)
+	var numberOfRecords int
+	err = Db.QueryRow("select count(*) from users where id = $1 and csrf_token = $2", user.Id, hashedCsrfToken).Scan(&numberOfRecords)
+	if err != nil {
+		return
+	}
+
+	if numberOfRecords == 1 {
+		validity = true
+	} else if numberOfRecords == 0 {
+		validity = false
+	}
+	return
+}
+
 type Information struct {
 	Message              string
 	Money                int
@@ -530,6 +546,18 @@ func EarnMoney(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	r.ParseForm()
+	user.CsrfToken = r.PostForm["csrfToken"][0]
+	validity, err = user.VerifyCsrfToken()
+
+	if err != nil {
+		panic(err)
+	}
+
+	if !validity {
+		return
+	}
+
 	user.Money += int(math.Pow(2, float64(user.OakFruits)/10.0))
 	err = user.Update()
 
@@ -561,6 +589,18 @@ func Reset(w http.ResponseWriter, r *http.Request) {
 		if err != nil {
 			panic(err)
 		}
+		return
+	}
+
+	r.ParseForm()
+	user.CsrfToken = r.PostForm["csrfToken"][0]
+	validity, err = user.VerifyCsrfToken()
+
+	if err != nil {
+		panic(err)
+	}
+
+	if !validity {
 		return
 	}
 
@@ -599,6 +639,18 @@ func Invest(w http.ResponseWriter, r *http.Request) {
 		if err != nil {
 			panic(err)
 		}
+		return
+	}
+
+	r.ParseForm()
+	user.CsrfToken = r.PostForm["csrfToken"][0]
+	validity, err = user.VerifyCsrfToken()
+
+	if err != nil {
+		panic(err)
+	}
+
+	if !validity {
 		return
 	}
 
@@ -699,6 +751,18 @@ func BuyOakFruits(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	r.ParseForm()
+	user.CsrfToken = r.PostForm["csrfToken"][0]
+	validity, err = user.VerifyCsrfToken()
+
+	if err != nil {
+		panic(err)
+	}
+
+	if !validity {
+		return
+	}
+
 	priceOfOakFruits := int(100.0 * (math.Pow(2, (float64(user.OakFruits)/10.0)+1.0)))
 
 	if user.Money >= priceOfOakFruits {
@@ -751,6 +815,18 @@ func BuyThunderFruits(w http.ResponseWriter, r *http.Request) {
 		if err != nil {
 			panic(err)
 		}
+		return
+	}
+
+	r.ParseForm()
+	user.CsrfToken = r.PostForm["csrfToken"][0]
+	validity, err = user.VerifyCsrfToken()
+
+	if err != nil {
+		panic(err)
+	}
+
+	if !validity {
 		return
 	}
 

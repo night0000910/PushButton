@@ -7,11 +7,33 @@ $(document).ready(function() {
     investButton.addEventListener("click", invest);
 })
 
+function getCsrfToken() {
+    var csrfToken = document.getElementById("csrf-token").value;
+    return csrfToken
+}
+
+function encodeHTMLForm(data) {
+    var params = [];
+
+    for (var name in data) {
+        var value = data[name];
+        var param = encodeURIComponent(name) + "=" + encodeURIComponent(value);
+        params.push(param);
+    }
+
+    return params.join("&").replace(/%20/g, "+");
+}
+
 function earnMoney() {
+    var csrfToken = getCsrfToken();
+    var data = {csrfToken : csrfToken};
+    params = encodeHTMLForm(data)
+
     var request = new XMLHttpRequest();
     request.open("POST", "/earn_money");
+    request.setRequestHeader("Content-Type", "application/x-www-form-urlencoded");
     request.onload = processAfterEarnMoney;
-    request.send();
+    request.send(params);
 }
 
 function processAfterEarnMoney() {
@@ -27,10 +49,15 @@ function processAfterEarnMoney() {
 }
 
 function invest() {
+    var csrfToken = getCsrfToken();
+    var data = {csrfToken : csrfToken};
+    params = encodeHTMLForm(data)
+
     var request = new XMLHttpRequest();
     request.open("POST", "/invest");
+    request.setRequestHeader("Content-Type", "application/x-www-form-urlencoded");
     request.onload = processAfterInvest;
-    request.send();
+    request.send(params);
 }
 
 function processAfterInvest() {
@@ -89,10 +116,15 @@ function processAfterInvest() {
 }
 
 function reset() {
+    var csrfToken = getCsrfToken();
+    var data = {csrfToken : csrfToken};
+    params = encodeHTMLForm(data)
+
     var request = new XMLHttpRequest();
     request.open("POST", "/reset");
+    request.setRequestHeader("Content-Type", "application/x-www-form-urlencoded");
     request.onload = processAfterReset;
-    request.send();
+    request.send(params);
 }
 
 function processAfterReset() {

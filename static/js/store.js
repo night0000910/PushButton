@@ -25,11 +25,33 @@ function insertPriceIntoElements() {
     thunderFruitsElement.innerHTML = priceOfThunderFruits;
 }
 
+function getCsrfToken() {
+    var csrfToken = document.getElementById("csrf-token").value;
+    return csrfToken
+}
+
+function encodeHTMLForm(data) {
+    var params = [];
+
+    for (var name in data) {
+        var value = data[name];
+        var param = encodeURIComponent(name) + "=" + encodeURIComponent(value);
+        params.push(param);
+    }
+
+    return params.join("&").replace(/%20/g, "+");
+}
+
 function buyOakFruits() {
+    var csrfToken = getCsrfToken();
+    var data = {csrfToken : csrfToken};
+    params = encodeHTMLForm(data)
+
     var request = new XMLHttpRequest();
     request.open("POST", "/buy_oak_fruits");
+    request.setRequestHeader("Content-Type", "application/x-www-form-urlencoded");
     request.onload = processAfterBuyOakFruits;
-    request.send();
+    request.send(params);
 }
 
 function processAfterBuyOakFruits() {
@@ -80,10 +102,15 @@ function processAfterBuyOakFruits() {
 }
 
 function buyThunderFruits() {
+    var csrfToken = getCsrfToken();
+    var data = {csrfToken : csrfToken};
+    params = encodeHTMLForm(data)
+
     var request = new XMLHttpRequest();
     request.open("POST", "/buy_thunder_fruits");
+    request.setRequestHeader("Content-Type", "application/x-www-form-urlencoded");
     request.onload = processAfterBuyThunderFruits;
-    request.send();
+    request.send(params);
 }
 
 function processAfterBuyThunderFruits() {
