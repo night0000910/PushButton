@@ -208,7 +208,7 @@ func ReturnTrueWithCertainProbability() (result bool) {
 }
 
 func MoveTo(page string, w http.ResponseWriter) {
-	w.Header().Set("Location", "http://13.113.131.106:8080/"+page)
+	w.Header().Set("Location", "http://13.113.131.106/"+page)
 	w.WriteHeader(302)
 }
 
