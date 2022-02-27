@@ -21,7 +21,7 @@ var Db *sql.DB
 
 func init() {
 	var err error
-	Db, err = sql.Open("postgres", "user=postgres dbname=pushbutton password=jhn5dzi38 sslmode=disable")
+	Db, err = sql.Open("postgres", "user=postgres dbname=pushbutton password=postgres sslmode=disable")
 
 	if err != nil {
 		panic(err)
@@ -208,7 +208,7 @@ func ReturnTrueWithCertainProbability() (result bool) {
 }
 
 func MoveTo(page string, w http.ResponseWriter) {
-	w.Header().Set("Location", "http://127.0.0.1:8080/"+page)
+	w.Header().Set("Location", "http://13.113.131.106:8080/"+page)
 	w.WriteHeader(302)
 }
 

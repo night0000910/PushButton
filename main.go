@@ -8,7 +8,7 @@ import (
 
 func main() {
 	server := http.Server{
-		Addr: "127.0.0.1:8080",
+		Addr: "13.113.131.106:8080",
 	}
 
 	http.Handle("/file/", hundles.ReturnFileHandler())
